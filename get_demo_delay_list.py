@@ -106,6 +106,5 @@ if __name__ == '__main__':
     else:
         out_filename = "demo_delay-%s.json" % datetime.datetime.now().isoformat()
         with open(out_filename, "w") as out_file:
-            for entry in hold_list:
-                simplejson.dump(entry, out_file)
-                out_file.write('\n')
+            simplejson.dump(hold_list, out_file)
+            out_file.write('\n')
