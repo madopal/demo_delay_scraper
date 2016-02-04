@@ -24,8 +24,9 @@ def parse_cmd_args():
         default=URL_LIST['2014-8888']
     )
     parser.add_argument(
-        "--year", 
-        help="Year to get data for [2003-present, default %d]" % datetime.datetime.now().year,
+        "--years", 
+        help="Years to get data for [2003-present, default %d]" % datetime.datetime.now().year,
+        nargs="*",
         default=datetime.datetime.now().year,
         type=int
     )
@@ -85,7 +86,9 @@ def get_demo_hold(year):
 
 if __name__ == '__main__':
     args = parse_cmd_args()
-    hold_list = get_demo_hold(args.year)
+    hold_list = {}
+    for year in args.years:
+        hold_list[year] = get_demo_hold(year)
 
     if not args.save:
         if args.pretty:
@@ -94,7 +97,7 @@ if __name__ == '__main__':
         else:
             print hold_list
     else:
-        out_filename = "demo_delay_%s.json" % datetime.datetime.now().isoformat()
+        out_filename = "demo_delay-%s.json" % datetime.datetime.now().isoformat()
         with open(out_filename, "w") as out_file:
             for entry in hold_list:
                 simplejson.dump(entry, out_file)
