@@ -40,51 +40,62 @@ def figure_out_url(year):
     url = None
     for key, value in URL_LIST.iteritems():
         range = key.split('-')
-        if int(range[0]) < year < int(range[1]):
+        if int(range[0]) <= year <= int(range[1]):
             url = value.replace(range[0], str(year))
     
     return url
 
+def get_demo_hold(year):
 
-hold_list = []
+    hold_list = []
 
-args = parse_cmd_args()
+    url = figure_out_url(year)
 
-url = figure_out_url(args.year)
-
-print "Attempting %s" % url
-r = requests.get(url)
-if r.status_code == 200:
-    data = BeautifulSoup(r.text, "lxml")
-    results = data.find_all('p')
-    for entry in results:
-        if 'status' in entry.get_text().lower():
-            hold_entry = {}
-            for part in entry:
-                if isinstance(part, basestring):
-                    if ':' in part:
-                        if part.split(':')[0].strip().lower().replace(" ", "_") == u"ward":
-                            out_data = int(part.split(':')[1].strip())
-                        else:
-                            out_data = part.split(':')[1].strip()
-                        hold_entry[part.split(':')[0].strip().lower().replace(" ", "_")] = out_data
-                    elif '#' in part:
-                        hold_entry['permit_number'] = int(part.lstrip('#').strip())
-            if len(hold_entry):
-                hold_list.append(hold_entry)
-else:
-    print "Unable to retrieve %s" % url
-    print r.status_code, r.reason
-
-if not args.save:
-    if args.pretty:
-        pp = pprint.PrettyPrinter(depth=2)
-        pp.pprint(hold_list)
+    print "Attempting %s" % url
+    r = requests.get(url)
+    if r.status_code == 200:
+        data = BeautifulSoup(r.text, "lxml")
+        results = data.find_all('p')
+        for entry in results:
+            if 'status' in entry.get_text().lower():
+                hold_entry = {}
+                for part in entry:
+                    if isinstance(part, basestring):
+                        if ':' in part:
+                            if part.split(':')[0].strip().lower().replace(" ", "_") == u"ward":
+                                out_data = int(part.split(':')[1].strip())
+                            else:
+                                out_data = part.split(':')[1].strip()
+                            hold_entry[part.split(':')[0].strip().lower().replace(" ", "_")] = out_data
+                        elif '#' in part:
+                            if '&' in part:
+                                nums = part.split('&')
+                                hold_entry['permit_numbers'] = []
+                                for num in nums:
+                                    hold_entry['permit_numbers'].append(int(num.strip().lstrip('#')))
+                            else:
+                                hold_entry['permit_numbers'] = [int(part.lstrip('#').strip())]
+                if len(hold_entry):
+                    hold_list.append(hold_entry)
     else:
-        print hold_list
-else:
-    out_filename = "demo_delay_%s.json" % datetime.datetime.now().isoformat()
-    with open(out_filename, "w") as out_file:
-        for entry in hold_list:
-            simplejson.dump(entry, out_file)
-            out_file.write('\n')
+        print "Unable to retrieve %s" % url
+        print r.status_code, r.reason
+
+    return hold_list
+
+if __name__ == '__main__':
+    args = parse_cmd_args()
+    hold_list = get_demo_hold(args.year)
+
+    if not args.save:
+        if args.pretty:
+            pp = pprint.PrettyPrinter(depth=3)
+            pp.pprint(hold_list)
+        else:
+            print hold_list
+    else:
+        out_filename = "demo_delay_%s.json" % datetime.datetime.now().isoformat()
+        with open(out_filename, "w") as out_file:
+            for entry in hold_list:
+                simplejson.dump(entry, out_file)
+                out_file.write('\n')
