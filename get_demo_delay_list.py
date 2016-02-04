@@ -7,6 +7,7 @@ from argparse import ArgumentParser
 import datetime
 import pprint
 import simplejson
+import re
 
 DEFAULT_URL = "http://www.cityofchicago.org/city/en/depts/dcd/supp_info/demolition-delay-hold-list--2015-.html"
 
@@ -64,7 +65,7 @@ def get_demo_hold(year):
                     if isinstance(part, basestring):
                         if ':' in part:
                             if part.split(':')[0].strip().lower().replace(" ", "_") == u"ward":
-                                out_data = int(part.split(':')[1].strip())
+                                out_data = int(re.findall(r'\d+', part.split(':')[1].strip())[0])
                             else:
                                 out_data = part.split(':')[1].strip()
                             hold_entry[part.split(':')[0].strip().lower().replace(" ", "_")] = out_data
@@ -73,9 +74,15 @@ def get_demo_hold(year):
                                 nums = part.split('&')
                                 hold_entry['permit_numbers'] = []
                                 for num in nums:
-                                    hold_entry['permit_numbers'].append(int(num.strip().lstrip('#')))
+                                    try:
+                                        hold_entry['permit_numbers'].append(int(num.strip().lstrip('#')))
+                                    except:
+                                        hold_entry['permit_numbers'].append(num.strip().lstrip('#'))
                             else:
-                                hold_entry['permit_numbers'] = [int(part.lstrip('#').strip())]
+                                try:
+                                    hold_entry['permit_numbers'] = [int(part.lstrip('#').strip())]
+                                except:
+                                    hold_entry['permit_numbers'] = [part.lstrip('#').strip()]
                 if len(hold_entry):
                     hold_list.append(hold_entry)
     else:
