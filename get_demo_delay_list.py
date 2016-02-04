@@ -10,13 +10,22 @@ import simplejson
 
 DEFAULT_URL = "http://www.cityofchicago.org/city/en/depts/dcd/supp_info/demolition-delay-hold-list--2015-.html"
 
+URL_LIST = {
+    '2014-8888' : "http://www.cityofchicago.org/city/en/depts/dcd/supp_info/demolition-delay-hold-list--2014-.html",
+    '2003-2013': "http://www.cityofchicago.org/city/en/depts/dcd/supp_info/demolition_delayholdlist2003.html",
+}
+
 def parse_cmd_args():
 
     parser = ArgumentParser()
-    parser.add_argument("--url", help="URL to scrape (default %s, where year is year" % DEFAULT_URL, default=DEFAULT_URL)
+    parser.add_argument(
+        "--url", 
+        help="URL to scrape (default %s, where year is --year)" % URL_LIST['2014-8888'].replace('2014', str(datetime.datetime.now().year)), 
+        default=URL_LIST['2014-8888']
+    )
     parser.add_argument(
         "--year", 
-        help="Year to get data for [2014-present, default %d" % datetime.datetime.now().year,
+        help="Year to get data for [2003-present, default %d]" % datetime.datetime.now().year,
         default=datetime.datetime.now().year,
         type=int
     )
@@ -27,14 +36,21 @@ def parse_cmd_args():
 
     return args
 
+def figure_out_url(year):
+    url = None
+    for key, value in URL_LIST.iteritems():
+        range = key.split('-')
+        if int(range[0]) < year < int(range[1]):
+            url = value.replace(range[0], str(year))
+    
+    return url
+
+
 hold_list = []
 
 args = parse_cmd_args()
 
-if args.year != 2015:
-    url = args.url.replace("2015", str(args.year))
-else:
-    url = args.url
+url = figure_out_url(args.year)
 
 print "Attempting %s" % url
 r = requests.get(url)
