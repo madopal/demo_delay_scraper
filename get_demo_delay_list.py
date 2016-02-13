@@ -47,55 +47,58 @@ def figure_out_url(year):
     
     return url
 
-def get_demo_hold(year):
+def get_demo_hold(years):
 
-    hold_list = []
+    hold_data = {}
 
-    url = figure_out_url(year)
+    for year in years:
+        hold_list = []
+        url = figure_out_url(year)
 
-    print "Attempting %s" % url
-    r = requests.get(url)
-    if r.status_code == 200:
-        data = BeautifulSoup(r.text, "lxml")
-        results = data.find_all('p')
-        for entry in results:
-            if 'status' in entry.get_text().lower():
-                hold_entry = {}
-                for part in entry:
-                    if isinstance(part, basestring):
-                        if ':' in part:
-                            if part.split(':')[0].strip().lower().replace(" ", "_") == u"ward":
-                                out_data = int(re.findall(r'\d+', part.split(':')[1].strip())[0])
-                            else:
-                                out_data = part.split(':')[1].strip()
-                            hold_entry[part.split(':')[0].strip().lower().replace(" ", "_")] = out_data
-                        elif '#' in part:
-                            if '&' in part:
-                                nums = part.split('&')
-                                hold_entry['permit_numbers'] = []
-                                for num in nums:
+        print "Attempting %s" % url
+        r = requests.get(url)
+        if r.status_code == 200:
+            data = BeautifulSoup(r.text, "lxml")
+            results = data.find_all('p')
+            for entry in results:
+                if 'status' in entry.get_text().lower():
+                    hold_entry = {}
+                    for part in entry:
+                        if isinstance(part, basestring):
+                            if ':' in part:
+                                if part.split(':')[0].strip().lower().replace(" ", "_") == u"ward":
+                                    out_data = int(re.findall(r'\d+', part.split(':')[1].strip())[0])
+                                else:
+                                    out_data = part.split(':')[1].strip()
+                                hold_entry[part.split(':')[0].strip().lower().replace(" ", "_")] = out_data
+                            elif '#' in part:
+                                if '&' in part:
+                                    nums = part.split('&')
+                                    hold_entry['permit_numbers'] = []
+                                    for num in nums:
+                                        try:
+                                            hold_entry['permit_numbers'].append(int(num.strip().lstrip('#')))
+                                        except:
+                                            hold_entry['permit_numbers'].append(num.strip().lstrip('#'))
+                                else:
                                     try:
-                                        hold_entry['permit_numbers'].append(int(num.strip().lstrip('#')))
+                                        hold_entry['permit_numbers'] = [int(part.lstrip('#').strip())]
                                     except:
-                                        hold_entry['permit_numbers'].append(num.strip().lstrip('#'))
-                            else:
-                                try:
-                                    hold_entry['permit_numbers'] = [int(part.lstrip('#').strip())]
-                                except:
-                                    hold_entry['permit_numbers'] = [part.lstrip('#').strip()]
-                if len(hold_entry):
-                    hold_list.append(hold_entry)
-    else:
-        print "Unable to retrieve %s" % url
-        print r.status_code, r.reason
+                                        hold_entry['permit_numbers'] = [part.lstrip('#').strip()]
+                    if len(hold_entry):
+                        hold_list.append(hold_entry)
+                        
+        else:
+            print "Unable to retrieve %s" % url
+            print r.status_code, r.reason
 
-    return hold_list
+        hold_data[year] = hold_list
+
+    return hold_data
 
 if __name__ == '__main__':
     args = parse_cmd_args()
-    hold_list = {}
-    for year in args.years:
-        hold_list[year] = get_demo_hold(year)
+    hold_list = get_demo_hold(args.years)
 
     if not args.save:
         if args.pretty:
